@@ -1,8 +1,9 @@
 import axios from 'axios';
+import cheerio from 'cheerio';
 import xpath from 'xpath';
 import {DOMParser} from 'xmldom';
 
-export function urlsOfSitemap(url: string): Promise<string[]> {
+export async function urlsOfSitemap(url: string): Promise<string[]> {
     return axios.get(url)
         .then((r: { data: string; }) => r.data)
         .then((data: string) => (new DOMParser()).parseFromString(data))
@@ -18,4 +19,28 @@ export function urlsOfSitemap(url: string): Promise<string[]> {
         .then((texts: Text[]) => {
             return texts.map(text => text.data);
         })
+}
+
+export type Content = {
+    id?: string;
+    url: string;
+    title: string;
+    author: string;
+    tag?: string;
+    time?: string;
+}
+
+export async function parseLoc(url: string): Promise<Content> {
+    return axios.get(url)
+        .then((r: { data: string; }) => r.data)
+        .then(cheerio.load)
+        .then($ => ({
+            id: $('article').attr('id')?.valueOf().replace(/post-/, ''),
+            url: url,
+            title: $('title').text(),
+            author: $('span.author').text(),
+            tag: $('span.article-tag').text().trim(),
+            time: $('time').attr('datetime')?.valueOf(),
+
+        }))
 }
